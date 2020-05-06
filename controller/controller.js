@@ -66,7 +66,9 @@ exports.postRegister = (req, res, next) => {
     const organisation = new Organisation(req.body.time, req.body.name, req.body.date, req.body.email, req.body.contact, req.body.units, req.body.pincode);
     organisation.save()
         .then(() => {
-            res.redirect(`/${req.body.pincode}/${req.body.date}/${req.body.time}/view`);
+            let date = req.body.date;
+            date = date = date.substring(8) + '-' + date.substring(5, 7) + '-' + date.substring(0, 4);
+            res.redirect(`/${req.body.pincode}/${date}/${req.body.time}/view`);
         }).catch(err => {
             console.log(err);
         })
@@ -74,21 +76,40 @@ exports.postRegister = (req, res, next) => {
 
 exports.getView = (req, res, next) => {
     let date = req.params.date;
-    date = date.substring(8) + '-' + date.substring(5, 7) + '-' + date.substring(0, 4);
-    const ref = db.ref(`AreawiseData/${req.params.pin}/${date}/${req.params.time}`)
+    const ref = db.ref(`AreawiseData`)
     ref.once("value")
         .then(data => {
             const allData = data.val();
-            const keys = Object.keys(allData);
-            const dataArray = []
-            keys.forEach(e => {
-                dataArray.push(allData[e]);
-            })
-            res.render('cards', {
-                value: dataArray,
-                date: date,
-                time: req.params.time
-            });
+            if (!allData[req.params.pin]) {
+                return res.render('cards', {
+                    value: null,
+                    date: date,
+                    time: req.params.time
+                });
+            } else if (!allData[req.params.pin][date]) {
+                return res.render('cards', {
+                    value: null,
+                    date: date,
+                    time: req.params.time
+                });
+            } else if (!allData[req.params.pin][date][req.params.time]) {
+                return res.render('cards', {
+                    value: null,
+                    date: date,
+                    time: req.params.time
+                });
+            } else {
+                const keys = Object.keys(allData[req.params.pin][date][req.params.time]);
+                const dataArray = []
+                keys.forEach(e => {
+                    dataArray.push(allData[req.params.pin][date][req.params.time][e]);
+                })
+                res.render('cards', {
+                    value: dataArray,
+                    date: date,
+                    time: req.params.time
+                });
+            }
         }).catch(err => {
             console.log(err);
         })
